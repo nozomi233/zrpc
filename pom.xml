@@ -18,6 +18,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <nerty.version>4.1.89.Final</nerty.version>
         <junit.version>4.13.2</junit.version>
+        <zookeeper.version>3.8.4</zookeeper.version>
     </properties>
 
     <dependencies>
@@ -37,6 +38,11 @@
                 <artifactId>junit</artifactId>
                 <version>${junit.version}</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.zookeeper</groupId>
+                <artifactId>zookeeper</artifactId>
+                <version>${zookeeper.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
