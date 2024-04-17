@@ -1,7 +1,8 @@
-package com.zhulang.utils;
+package com.zhulang.utils.zookeeper;
 
 import com.zhulang.Constant;
 import com.zhulang.exceptions.ZookeeperException;
+import com.zhulang.utils.zookeeper.ZookeeperNode;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.*;
 

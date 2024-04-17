@@ -1,5 +1,6 @@
 package com.zhulang;
 
+import com.zhulang.discovery.RegistryConfig;
 import com.zhulang.impl.HelloZrpcImpl;
 
 /**
@@ -7,7 +8,7 @@ import com.zhulang.impl.HelloZrpcImpl;
  * @Date 2024/4/16 20:49
  */
 
-public class Application {
+public class ProviderApplication {
 
     public static void main(String[] args) {
         // 服务提供方，需要注册服务，启动服务

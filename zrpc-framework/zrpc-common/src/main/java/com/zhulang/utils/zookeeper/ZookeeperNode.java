@@ -1,4 +1,4 @@
-package com.zhulang.utils;
+package com.zhulang.utils.zookeeper;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

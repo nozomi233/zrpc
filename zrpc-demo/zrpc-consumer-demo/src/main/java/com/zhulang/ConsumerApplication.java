@@ -1,11 +1,13 @@
 package com.zhulang;
 
+import com.zhulang.discovery.RegistryConfig;
+
 /**
  * @Author Nozomi
  * @Date 2024/4/16 20:59
  */
 
-public class Application {
+public class ConsumerApplication {
 
     public static void main(String[] args) {
         // 想尽一切办法获取代理对象,使用ReferenceConfig进行封装
@@ -19,7 +21,7 @@ public class Application {
         // 3、选择一个服务并建立连接
         // 4、发送请求，携带一些信息（接口名，参数列表，方法的名字），获得结果
         ZrpcBootstrap.getInstance()
-                .application("first-yrpc-consumer")
+                .application("first-zrpc-consumer")
                 .registry(new RegistryConfig("zookeeper://127.0.0.1:2181"))
                 .reference(reference);
 

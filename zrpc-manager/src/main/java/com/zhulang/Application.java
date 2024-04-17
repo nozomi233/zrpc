@@ -1,16 +1,12 @@
 package com.zhulang;
 
-import com.zhulang.utils.ZookeeperNode;
-import com.zhulang.utils.ZookeeperUtils;
+import com.zhulang.utils.zookeeper.ZookeeperNode;
+import com.zhulang.utils.zookeeper.ZookeeperUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * @Author Nozomi
@@ -37,7 +33,7 @@ public class Application {
         ZooKeeper zooKeeper = ZookeeperUtils.createZookeeper();
 
         // 定义节点和数据
-        String basePath = "/yrpc-metadata";
+        String basePath = "/zrpc-metadata";
         String providerPath = basePath + "/providers";
         String consumersPath = basePath + "/consumers";
         ZookeeperNode baseNode = new ZookeeperNode(basePath, null);
