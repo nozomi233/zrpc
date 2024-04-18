@@ -17,14 +17,14 @@ import java.util.concurrent.CompletableFuture;
  * @Date 2024/4/18 16:28
  */
 
-@Slf4j
 public class MySimpleChannelInboundHandler extends SimpleChannelInboundHandler<ByteBuf> {
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, ByteBuf msg) throws Exception {
-        // 服务提供方给予的结果
+        // 服务提供方，给与的结果
         String result = msg.toString(Charset.defaultCharset());
-        // 从全局挂起请求中寻找与之匹配的待处理的 completableFuture
+        // 从全局的挂起的请求中寻找与之匹配的待处理的 cf
         CompletableFuture<Object> completableFuture = ZrpcBootstrap.PENDING_REQUEST.get(1L);
         completableFuture.complete(result);
     }
 }
+
