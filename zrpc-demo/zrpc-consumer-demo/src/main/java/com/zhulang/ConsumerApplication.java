@@ -1,12 +1,13 @@
 package com.zhulang;
 
 import com.zhulang.discovery.RegistryConfig;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @Author Nozomi
  * @Date 2024/4/16 20:59
  */
-
+@Slf4j
 public class ConsumerApplication {
 
     public static void main(String[] args) {
@@ -26,6 +27,7 @@ public class ConsumerApplication {
                 .reference(reference);
 
         HelloZrpc helloZrpc = reference.get();
-        helloZrpc.sayHi("你好");
+        String sayHi = helloZrpc.sayHi("你好");
+        log.info("sayHi-->{}", sayHi);
     }
 }
