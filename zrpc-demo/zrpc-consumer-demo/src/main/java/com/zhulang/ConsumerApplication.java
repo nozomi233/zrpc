@@ -27,7 +27,7 @@ public class ConsumerApplication {
                 .reference(reference);
 
         HelloZrpc helloZrpc = reference.get();
-        String sayHi = helloZrpc.sayHi("你好");
+        String sayHi = helloZrpc.sayHi("你好,nozomi");
         log.info("sayHi-->{}", sayHi);
     }
 }

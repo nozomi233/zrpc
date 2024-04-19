@@ -1,9 +1,8 @@
 package com.zhulang.channelhandler.handler;
 
-import com.zhulang.enumeration.RequestType;
 import com.zhulang.transport.message.MessageFormatConstant;
 import com.zhulang.transport.message.RequestPayload;
-import com.zhulang.transport.message.ZrpcRequest;
+import com.zhulang.transport.message.ZrpcResponse;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -19,15 +18,15 @@ import java.io.ObjectOutputStream;
  * <pre>
  *   0    1    2    3    4    5    6    7    8    9    10   11   12   13   14   15   16   17   18   19   20   21   22
  *   +----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+
- *   |    magic          |ver |head  len|    full length    | qt | ser|comp|              RequestId                |
+ *   |    magic          |ver |head  len|    full length    |code  ser|comp|              RequestId                |
  *   +-----+-----+-------+----+----+----+----+-----------+----- ---+--------+----+----+----+----+----+----+---+---+
  *   |                                                                                                             |
  *   |                                         body                                                                |
  *   |                                                                                                             |
  *   +--------------------------------------------------------------------------------------------------------+---+
  * </pre>
- * <p>
- * 4B magic(魔数)   --->zrpc.getBytes()
+ *
+ * 4B magic(魔数)   --->yrpc.getBytes()
  * 1B version(版本)   ----> 1
  * 2B header length 首部的长度
  * 4B full length 报文总长度
@@ -35,19 +34,17 @@ import java.io.ObjectOutputStream;
  * 1B compress
  * 1B requestType
  * 8B requestId
- * <p>
- * body
- * <p>
- * 出站时，第一个经过的处理器
  *
+ * body
+ *
+ * 出站时，第一个经过的处理器
  * @Author Nozomi
- * @Date 2024/4/18 21:32
+ * @Date 2024/4/19 21:22
  */
 @Slf4j
-public class ZrpcRequestEncoder extends MessageToByteEncoder<ZrpcRequest> {
-
+public class ZrpcResponseEncoder extends MessageToByteEncoder<ZrpcResponse> {
     @Override
-    protected void encode(ChannelHandlerContext channelHandlerContext, ZrpcRequest zrpcRequest, ByteBuf byteBuf) throws Exception {
+    protected void encode(ChannelHandlerContext channelHandlerContext, ZrpcResponse zrpcResponse, ByteBuf byteBuf) throws Exception {
         // 4个字节的魔数值
         byteBuf.writeBytes(MessageFormatConstant.MAGIC);
         // 1个字节的版本号
@@ -57,26 +54,15 @@ public class ZrpcRequestEncoder extends MessageToByteEncoder<ZrpcRequest> {
         // 总长度不清楚，不知道body的长度 writeIndex(写指针)
         byteBuf.writerIndex(byteBuf.writerIndex() + MessageFormatConstant.FULL_FIELD_LENGTH);
         // 3个类型
-        byteBuf.writeByte(zrpcRequest.getRequestType());
-        byteBuf.writeByte(zrpcRequest.getSerializeType());
-        byteBuf.writeByte(zrpcRequest.getCompressType());
+        byteBuf.writeByte(zrpcResponse.getCode());
+        byteBuf.writeByte(zrpcResponse.getSerializeType());
+        byteBuf.writeByte(zrpcResponse.getCompressType());
         // 8字节的请求id
-        byteBuf.writeLong(zrpcRequest.getRequestId());
+        byteBuf.writeLong(zrpcResponse.getRequestId());
 
-//        // 如果是心跳请求， 就不处理请求体
-//        if (zrpcRequest.getRequestType() == RequestType.HEART_BEAT.getId()){
-//            // 处理一下总长度，其实总长度 = header长度
-//            int writerIndex = byteBuf.writerIndex();
-//            // 将写指针的位置移动到总长度的位置上
-//            byteBuf.writerIndex(MessageFormatConstant.MAGIC.length
-//                    + MessageFormatConstant.VERSION_LENGTH + MessageFormatConstant.HEADER_FIELD_LENGTH);
-//            byteBuf.writeInt(MessageFormatConstant.HEADER_LENGTH);
-//            byteBuf.writerIndex(writerIndex);
-//            return;
-//        }
         // 写入请求体（requestPayload）
-        byte[] body = getBodyBytes(zrpcRequest.getRequestPayload());
-        if (body != null){
+        byte[] body = getBodyBytes(zrpcResponse.getBody());
+        if (body != null) {
             byteBuf.writeBytes(body);
         }
         int bodyLength = body == null ? 0 : body.length;
@@ -91,16 +77,15 @@ public class ZrpcRequestEncoder extends MessageToByteEncoder<ZrpcRequest> {
 
         // 将写指针归位
         byteBuf.writerIndex(writerIndex);
-
         if (log.isDebugEnabled()){
-            log.debug("请求【{}】已经完成报文的编码。", zrpcRequest.getRequestId());
+            log.debug("响应【{}】已经在服务端完成响应编码工作。", zrpcResponse.getRequestId());
         }
-
     }
 
-    private byte[] getBodyBytes(RequestPayload requestPayload) {
+
+    private byte[] getBodyBytes(Object body) {
         // 针对不同的消息类型需要做不同的处理，心跳的请求，没有payload
-        if (requestPayload == null){
+        if (body == null){
             return null;
         }
 
@@ -109,7 +94,7 @@ public class ZrpcRequestEncoder extends MessageToByteEncoder<ZrpcRequest> {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ObjectOutputStream outputStream = new ObjectOutputStream(baos);
-            outputStream.writeObject(requestPayload);
+            outputStream.writeObject(body);
 
             // 压缩
 
@@ -119,4 +104,5 @@ public class ZrpcRequestEncoder extends MessageToByteEncoder<ZrpcRequest> {
             throw new RuntimeException(e);
         }
     }
+
 }

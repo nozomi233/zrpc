@@ -2,6 +2,7 @@ package com.zhulang.channelhandler;
 
 import com.zhulang.channelhandler.handler.MySimpleChannelInboundHandler;
 import com.zhulang.channelhandler.handler.ZrpcRequestEncoder;
+import com.zhulang.channelhandler.handler.ZrpcResponseDecoder;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LogLevel;
@@ -19,6 +20,9 @@ public class ConsumerChannelInitializer extends ChannelInitializer<SocketChannel
                 .addLast(new LoggingHandler(LogLevel.DEBUG))
                 // 消息编码器
                 .addLast(new ZrpcRequestEncoder())
+                // 入站的解码器
+                .addLast(new ZrpcResponseDecoder())
+                // 处理结果
 
 
                 .addLast(new MySimpleChannelInboundHandler());

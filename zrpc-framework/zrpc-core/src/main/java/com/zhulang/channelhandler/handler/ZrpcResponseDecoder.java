@@ -4,6 +4,7 @@ import com.zhulang.enumeration.RequestType;
 import com.zhulang.transport.message.MessageFormatConstant;
 import com.zhulang.transport.message.RequestPayload;
 import com.zhulang.transport.message.ZrpcRequest;
+import com.zhulang.transport.message.ZrpcResponse;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
@@ -18,7 +19,7 @@ import java.io.ObjectInputStream;
  * <pre>
  *   0    1    2    3    4    5    6    7    8    9    10   11   12   13   14   15   16   17   18   19   20   21   22
  *   +----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+
- *   |    magic          |ver |head  len|    full length    | qt | ser|comp|              RequestId                |
+ *   |    magic          |ver |head  len|    full length    |code| ser|comp|              RequestId                |
  *   +-----+-----+-------+----+----+----+----+-----------+----- ---+--------+----+----+----+----+----+----+---+---+
  *   |                                                                                                             |
  *   |                                         body                                                                |
@@ -35,14 +36,12 @@ import java.io.ObjectInputStream;
  * 1B requestType
  * 8B requestId
  * <p>
- * 基于长度字段的帧解码器
- *
  * @Author Nozomi
- * @Date 2024/4/18 22:41
+ * @Date 2024/4/19 21:22
  */
 @Slf4j
-public class ZrpcRequestDecoder extends LengthFieldBasedFrameDecoder {
-    public ZrpcRequestDecoder() {
+public class ZrpcResponseDecoder  extends LengthFieldBasedFrameDecoder {
+    public ZrpcResponseDecoder() {
         super(
                 // 找到当前报文的总长度，截取报文，截取出来的报文我们可以去进行解析
                 // 最大帧的长度，超过这个maxFrameLength值会直接丢弃
@@ -90,7 +89,7 @@ public class ZrpcRequestDecoder extends LengthFieldBasedFrameDecoder {
         int fullLength = byteBuf.readInt();
 
         // 5、请求类型
-        byte requestType = byteBuf.readByte();
+        byte responseCode = byteBuf.readByte();
 
         // 6、序列化类型
         byte serializeType = byteBuf.readByte();
@@ -102,19 +101,19 @@ public class ZrpcRequestDecoder extends LengthFieldBasedFrameDecoder {
         long requestId = byteBuf.readLong();
 
         // 我们需要封装
-        ZrpcRequest zrpcRequest = new ZrpcRequest();
-        zrpcRequest.setRequestType(requestType);
-        zrpcRequest.setCompressType(compressType);
-        zrpcRequest.setSerializeType(serializeType);
-        zrpcRequest.setRequestId(requestId);
+        ZrpcResponse zrpcResponse = new ZrpcResponse();
+        zrpcResponse.setCode(responseCode);
+        zrpcResponse.setCompressType(compressType);
+        zrpcResponse.setSerializeType(serializeType);
+        zrpcResponse.setRequestId(requestId);
 
-        // 心跳请求没有负载，此处可以判断并直接返回
-        if( requestType == RequestType.HEART_BEAT.getId() ){
-            return zrpcRequest;
-        }
+        // todo 心跳请求没有负载，此处可以判断并直接返回
+//        if( requestType == RequestType.HEART_BEAT.getId() ){
+//            return zrpcRequest;
+//        }
 
-        int payloadLength = fullLength - headLength;
-        byte[] payload = new byte[payloadLength];
+        int bodyLength = fullLength - headLength;
+        byte[] payload = new byte[bodyLength];
         byteBuf.readBytes(payload);
 
         // 有了字节数组之后就可以解压缩，反序列化
@@ -124,15 +123,16 @@ public class ZrpcRequestDecoder extends LengthFieldBasedFrameDecoder {
         try (ByteArrayInputStream bis = new ByteArrayInputStream(payload);
              ObjectInputStream ois = new ObjectInputStream(bis)
         ) {
-            RequestPayload requestPayload = (RequestPayload) ois.readObject();
-            zrpcRequest.setRequestPayload(requestPayload);
+            Object body = ois.readObject();
+            zrpcResponse.setBody(body);
         } catch (IOException | ClassNotFoundException e){
             log.error("请求【{}】反序列化时发生了异常",requestId,e);
         }
 
         if (log.isDebugEnabled()){
-            log.debug("请求【{}】已经在服务端完成解码工作。", zrpcRequest.getRequestId());
+            log.debug("响应【{}】已经在调用端完成解码工作。", zrpcResponse.getRequestId());
         }
-        return zrpcRequest;
+
+        return zrpcResponse;
     }
 }

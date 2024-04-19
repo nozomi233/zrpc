@@ -2,6 +2,7 @@ package com.zhulang;
 
 import com.zhulang.channelhandler.handler.MethodCallHandler;
 import com.zhulang.channelhandler.handler.ZrpcRequestDecoder;
+import com.zhulang.channelhandler.handler.ZrpcResponseEncoder;
 import com.zhulang.discovery.Registry;
 import com.zhulang.discovery.RegistryConfig;
 import io.netty.bootstrap.ServerBootstrap;
@@ -152,7 +153,8 @@ public class ZrpcBootstrap {
                             socketChannel.pipeline().addLast(new LoggingHandler())
                                     .addLast(new ZrpcRequestDecoder())
                                     // 根据请求进行方法调用
-                                    .addLast(new MethodCallHandler());
+                                    .addLast(new MethodCallHandler())
+                                    .addLast(new ZrpcResponseEncoder());
                         }
                     });
 
