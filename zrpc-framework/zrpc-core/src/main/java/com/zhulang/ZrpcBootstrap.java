@@ -35,6 +35,7 @@ public class ZrpcBootstrap {
     private ProtocolConfig protocolConfig;
     private int port = 8088;
     public final static IdGenerator ID_GENERATOR = new IdGenerator(1, 2);
+    public static String SERIALIZE_TYPE = "jdk";
 
     // 注册中心
     private Registry registry;
@@ -182,6 +183,19 @@ public class ZrpcBootstrap {
         // 配置reference，将来调用get方法时，方便生成代理对象
         // 1、reference需要一个注册中心
         reference.setRegistry(registry);
+        return this;
+    }
+
+    /**
+     * 用来配置序列化的方式
+     * @param serializeType
+     * @return
+     */
+    public ZrpcBootstrap serialize(String serializeType) {
+        SERIALIZE_TYPE = serializeType;
+        if (log.isDebugEnabled()){
+            log.debug("我们配置了使用的序列化方式为【{}】。", serializeType);
+        }
         return this;
     }
 }

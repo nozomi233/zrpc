@@ -1,6 +1,8 @@
 package com.zhulang.channelhandler.handler;
 
 import com.zhulang.enumeration.RequestType;
+import com.zhulang.serialize.Serializer;
+import com.zhulang.serialize.SerializerFactory;
 import com.zhulang.transport.message.MessageFormatConstant;
 import com.zhulang.transport.message.RequestPayload;
 import com.zhulang.transport.message.ZrpcRequest;
@@ -120,14 +122,9 @@ public class ZrpcResponseDecoder  extends LengthFieldBasedFrameDecoder {
         // todo 解压缩
 
         // todo 反序列化
-        try (ByteArrayInputStream bis = new ByteArrayInputStream(payload);
-             ObjectInputStream ois = new ObjectInputStream(bis)
-        ) {
-            Object body = ois.readObject();
-            zrpcResponse.setBody(body);
-        } catch (IOException | ClassNotFoundException e){
-            log.error("请求【{}】反序列化时发生了异常",requestId,e);
-        }
+        Serializer serializer = SerializerFactory.getSerializer(zrpcResponse.getSerializeType()).getImpl();
+        Object body = serializer.deserialize(payload, Object.class);
+        zrpcResponse.setBody(body);
 
         if (log.isDebugEnabled()){
             log.debug("响应【{}】已经在调用端完成解码工作。", zrpcResponse.getRequestId());

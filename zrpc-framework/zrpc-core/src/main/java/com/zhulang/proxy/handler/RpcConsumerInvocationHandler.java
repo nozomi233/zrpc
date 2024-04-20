@@ -6,6 +6,7 @@ import com.zhulang.discovery.Registry;
 import com.zhulang.enumeration.RequestType;
 import com.zhulang.exceptions.DiscoveryException;
 import com.zhulang.exceptions.NetworkException;
+import com.zhulang.serialize.SerializerFactory;
 import com.zhulang.transport.message.RequestPayload;
 import com.zhulang.transport.message.ZrpcRequest;
 import io.netty.channel.Channel;
@@ -86,7 +87,7 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
                 .requestId(ZrpcBootstrap.ID_GENERATOR.getId())
                 .compressType((byte) 1)
                 .requestType(RequestType.REQUEST.getId())
-                .serializeType((byte) 1)
+                .serializeType(SerializerFactory.getSerializer(ZrpcBootstrap.SERIALIZE_TYPE).getCode())
                 .requestPayload(requestPayload)
                 .build();
 

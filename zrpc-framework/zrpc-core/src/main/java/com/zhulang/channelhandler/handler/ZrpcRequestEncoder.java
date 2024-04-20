@@ -1,6 +1,11 @@
 package com.zhulang.channelhandler.handler;
 
+import com.zhulang.ZrpcBootstrap;
 import com.zhulang.enumeration.RequestType;
+import com.zhulang.serialize.SerializeUtil;
+import com.zhulang.serialize.Serializer;
+import com.zhulang.serialize.SerializerFactory;
+import com.zhulang.serialize.impl.JdkSerializer;
 import com.zhulang.transport.message.MessageFormatConstant;
 import com.zhulang.transport.message.RequestPayload;
 import com.zhulang.transport.message.ZrpcRequest;
@@ -75,7 +80,19 @@ public class ZrpcRequestEncoder extends MessageToByteEncoder<ZrpcRequest> {
 //            return;
 //        }
         // 写入请求体（requestPayload）
-        byte[] body = getBodyBytes(zrpcRequest.getRequestPayload());
+        // 1. 根据配置的序列化方式进行序列化
+        // 怎么实现序列化？ 1. 工具类，耦合性很高
+
+        Serializer serializer = SerializerFactory.getSerializer(ZrpcBootstrap.SERIALIZE_TYPE).getImpl();
+        byte[] body = serializer.serialize(zrpcRequest.getRequestPayload());
+
+        // 2. 根据配置的压缩方式进行压缩
+
+
+
+
+
+
         if (body != null){
             byteBuf.writeBytes(body);
         }
@@ -98,25 +115,4 @@ public class ZrpcRequestEncoder extends MessageToByteEncoder<ZrpcRequest> {
 
     }
 
-    private byte[] getBodyBytes(RequestPayload requestPayload) {
-        // 针对不同的消息类型需要做不同的处理，心跳的请求，没有payload
-        if (requestPayload == null){
-            return null;
-        }
-
-        // 希望可以通过一些设计模式，面向对象的编程，让我们可以配置修改序列化和压缩的方式
-        // 对象怎么变成一个字节数据  序列化  压缩
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ObjectOutputStream outputStream = new ObjectOutputStream(baos);
-            outputStream.writeObject(requestPayload);
-
-            // 压缩
-
-            return baos.toByteArray();
-        } catch (IOException e) {
-            log.error("序列化时出现异常");
-            throw new RuntimeException(e);
-        }
-    }
 }

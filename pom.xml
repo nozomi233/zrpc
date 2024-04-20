@@ -31,6 +31,7 @@
         <commons.lang3.version>3.12.0</commons.lang3.version>
         <hutool.version>5.8.12</hutool.version>
         <lombok.version>1.18.28</lombok.version>
+        <hession.version>4.0.66</hession.version>
     </properties>
 
 
@@ -83,6 +84,12 @@
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.caucho</groupId>
+                <artifactId>hessian</artifactId>
+                <version>${hession.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

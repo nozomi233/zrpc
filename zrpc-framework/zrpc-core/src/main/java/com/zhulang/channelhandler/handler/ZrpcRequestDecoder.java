@@ -1,6 +1,8 @@
 package com.zhulang.channelhandler.handler;
 
 import com.zhulang.enumeration.RequestType;
+import com.zhulang.serialize.Serializer;
+import com.zhulang.serialize.SerializerFactory;
 import com.zhulang.transport.message.MessageFormatConstant;
 import com.zhulang.transport.message.RequestPayload;
 import com.zhulang.transport.message.ZrpcRequest;
@@ -120,15 +122,20 @@ public class ZrpcRequestDecoder extends LengthFieldBasedFrameDecoder {
         // 有了字节数组之后就可以解压缩，反序列化
         // todo 解压缩
 
-        // todo 反序列化
-        try (ByteArrayInputStream bis = new ByteArrayInputStream(payload);
-             ObjectInputStream ois = new ObjectInputStream(bis)
-        ) {
-            RequestPayload requestPayload = (RequestPayload) ois.readObject();
-            zrpcRequest.setRequestPayload(requestPayload);
-        } catch (IOException | ClassNotFoundException e){
-            log.error("请求【{}】反序列化时发生了异常",requestId,e);
-        }
+        // 反序列化
+        // 1 --> jdk
+        Serializer serializer = SerializerFactory.getSerializer(serializeType).getImpl();
+        RequestPayload requestPayload = serializer.deserialize(payload, RequestPayload.class);
+        zrpcRequest.setRequestPayload(requestPayload);
+
+//        try (ByteArrayInputStream bis = new ByteArrayInputStream(payload);
+//             ObjectInputStream ois = new ObjectInputStream(bis)
+//        ) {
+//            RequestPayload requestPayload = (RequestPayload) ois.readObject();
+//            zrpcRequest.setRequestPayload(requestPayload);
+//        } catch (IOException | ClassNotFoundException e){
+//            log.error("请求【{}】反序列化时发生了异常",requestId,e);
+//        }
 
         if (log.isDebugEnabled()){
             log.debug("请求【{}】已经在服务端完成解码工作。", zrpcRequest.getRequestId());

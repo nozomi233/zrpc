@@ -1,5 +1,7 @@
 package com.zhulang.channelhandler.handler;
 
+import com.zhulang.serialize.Serializer;
+import com.zhulang.serialize.SerializerFactory;
 import com.zhulang.transport.message.MessageFormatConstant;
 import com.zhulang.transport.message.RequestPayload;
 import com.zhulang.transport.message.ZrpcResponse;
@@ -61,7 +63,10 @@ public class ZrpcResponseEncoder extends MessageToByteEncoder<ZrpcResponse> {
         byteBuf.writeLong(zrpcResponse.getRequestId());
 
         // 写入请求体（requestPayload）
-        byte[] body = getBodyBytes(zrpcResponse.getBody());
+        // 对响应做序列化
+        Serializer serializer = SerializerFactory.getSerializer(zrpcResponse.getSerializeType()).getImpl();
+        byte[] body = serializer.serialize(zrpcResponse.getBody());
+        // todo 压缩
         if (body != null) {
             byteBuf.writeBytes(body);
         }
@@ -82,27 +87,5 @@ public class ZrpcResponseEncoder extends MessageToByteEncoder<ZrpcResponse> {
         }
     }
 
-
-    private byte[] getBodyBytes(Object body) {
-        // 针对不同的消息类型需要做不同的处理，心跳的请求，没有payload
-        if (body == null){
-            return null;
-        }
-
-        // 希望可以通过一些设计模式，面向对象的编程，让我们可以配置修改序列化和压缩的方式
-        // 对象怎么变成一个字节数据  序列化  压缩
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ObjectOutputStream outputStream = new ObjectOutputStream(baos);
-            outputStream.writeObject(body);
-
-            // 压缩
-
-            return baos.toByteArray();
-        } catch (IOException e) {
-            log.error("序列化时出现异常");
-            throw new RuntimeException(e);
-        }
-    }
 
 }
