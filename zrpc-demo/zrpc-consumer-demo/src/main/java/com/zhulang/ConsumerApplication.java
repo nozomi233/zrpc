@@ -29,7 +29,10 @@ public class ConsumerApplication {
                 .reference(reference);
 
         HelloZrpc helloZrpc = reference.get();
-        String sayHi = helloZrpc.sayHi("你好,nozomi");
-        log.info("sayHi-->{}", sayHi);
+        for (int i = 0; i < 10; i++){
+            String sayHi = helloZrpc.sayHi("你好,nozomi");
+            log.info("sayHi-->{}", sayHi);
+        }
+
     }
 }

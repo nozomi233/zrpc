@@ -49,9 +49,36 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
 //        log.info("method-->{}", method.getName());
 //        log.info("args-->{}", args);
 
-        // 1、发现服务，从注册中心，寻找一个可用的服务
+        // 调整顺序，先封装请求，再获取服务端节点和连接，这样可以在选择节点的时候根据封装好的请求内容进行负载均衡
+        /*
+         * ------------------ 封装报文 ---------------------------
+         */
+        RequestPayload requestPayload = RequestPayload.builder()
+                .interfaceName(interfaceRef.getName())
+                .methodName(method.getName())
+                .parametersType(method.getParameterTypes())
+                .parametersValue(args)
+                .returnType(method.getReturnType())
+                .build();
+
+        // 1、 创建请求
+        ZrpcRequest zrpcRequest = ZrpcRequest.builder()
+                .requestId(ZrpcBootstrap.ID_GENERATOR.getId())
+                .compressType(CompressorFactory.getCompressor(ZrpcBootstrap.COMPRESS_TYPE).getCode())
+                .requestType(RequestType.REQUEST.getId())
+                .serializeType(SerializerFactory.getSerializer(ZrpcBootstrap.SERIALIZE_TYPE).getCode())
+                .requestPayload(requestPayload)
+                .build();
+
+        // 将请求存入本地线程，需要在合适的时候调用remove方法
+        ZrpcBootstrap.REQUEST_THREAD_LOCAL.set(zrpcRequest);
+
+
+
+        // 2、发现服务，从注册中心拉取服务列表，并通过客户端负载均衡寻找一个可用节点
         // 传入服务的名字,返回ip+端口
-        InetSocketAddress address = registry.lookup(interfaceRef.getName());
+//        InetSocketAddress address = registry.lookup(interfaceRef.getName());
+        InetSocketAddress address = ZrpcBootstrap.LOAD_BALANCER.selectServiceAddress(interfaceRef.getName());
         if (log.isDebugEnabled()) {
             log.debug("服务调用方，发现了服务【{}】的可用主机【{}】.",
                     interfaceRef.getName(), address);
@@ -70,27 +97,6 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
             log.debug("获取了和【{}】建立的连接通道,准备发送数据.", address);
         }
 
-
-
-        /*
-         * ------------------ 封装报文 ---------------------------
-         */
-        RequestPayload requestPayload = RequestPayload.builder()
-                .interfaceName(interfaceRef.getName())
-                .methodName(method.getName())
-                .parametersType(method.getParameterTypes())
-                .parametersValue(args)
-                .returnType(method.getReturnType())
-                .build();
-
-        // todo 需要对请求id和各种类型做处理
-        ZrpcRequest zrpcRequest = ZrpcRequest.builder()
-                .requestId(ZrpcBootstrap.ID_GENERATOR.getId())
-                .compressType(CompressorFactory.getCompressor(ZrpcBootstrap.COMPRESS_TYPE).getCode())
-                .requestType(RequestType.REQUEST.getId())
-                .serializeType(SerializerFactory.getSerializer(ZrpcBootstrap.SERIALIZE_TYPE).getCode())
-                .requestPayload(requestPayload)
-                .build();
 
         /*
          * ------------------同步策略-------------------------
@@ -130,6 +136,9 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
                 completableFuture.completeExceptionally(promise.cause());
             }
         });
+
+        // 清理ThreadLocal
+        ZrpcBootstrap.REQUEST_THREAD_LOCAL.remove();
 //
         // 如果没有地方处理这个 completableFuture ，这里会阻塞，等待complete方法的执行
         // q: 我们需要在哪里调用complete方法得到结果，很明显 pipeline 中最终的handler的处理结果

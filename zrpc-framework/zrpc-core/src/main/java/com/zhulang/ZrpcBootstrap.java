@@ -5,6 +5,10 @@ import com.zhulang.channelhandler.handler.ZrpcRequestDecoder;
 import com.zhulang.channelhandler.handler.ZrpcResponseEncoder;
 import com.zhulang.discovery.Registry;
 import com.zhulang.discovery.RegistryConfig;
+import com.zhulang.loadbalancer.LoadBalancer;
+import com.zhulang.loadbalancer.impl.ConsistentHashBalancer;
+import com.zhulang.loadbalancer.impl.RoundRobinLoadBalancer;
+import com.zhulang.transport.message.ZrpcRequest;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -33,13 +37,16 @@ public class ZrpcBootstrap {
     private String appName = "default";
     private RegistryConfig registryConfig;
     private ProtocolConfig protocolConfig;
-    private int port = 8088;
+    public static int PORT = 8088;
     public final static IdGenerator ID_GENERATOR = new IdGenerator(1, 2);
     public static String SERIALIZE_TYPE = "jdk";
     public static String COMPRESS_TYPE = "gzip";
 
+    public static final ThreadLocal<ZrpcRequest> REQUEST_THREAD_LOCAL = new ThreadLocal<>();
+
     // 注册中心
     private Registry registry;
+    public static LoadBalancer LOAD_BALANCER;
 
     // 连接的缓存,如果使用InetSocketAddress这样的类做key，一定要看他有没有重写equals方法和toString方法
     public final static Map<InetSocketAddress, Channel> CHANNEL_CACHE = new ConcurrentHashMap<>(16);
@@ -83,6 +90,8 @@ public class ZrpcBootstrap {
 
         // 尝试使用 registryConfig 获取一个注册中心，有点工厂设计模式的意思了
         this.registry = registryConfig.getRegistry();
+        // todo 需要修改
+        ZrpcBootstrap.LOAD_BALANCER = new ConsistentHashBalancer();
         return this;
     }
 
@@ -159,7 +168,7 @@ public class ZrpcBootstrap {
                     });
 
             // 4、绑定端口
-            ChannelFuture channelFuture = serverBootstrap.bind(port).sync();
+            ChannelFuture channelFuture = serverBootstrap.bind(PORT).sync();
 
             channelFuture.channel().closeFuture().sync();
         } catch (InterruptedException e){
@@ -211,5 +220,9 @@ public class ZrpcBootstrap {
             log.debug("我们配置了使用的压缩算法为【{}】。", compressType);
         }
         return this;
+    }
+
+    public Registry getRegistry() {
+        return registry;
     }
 }

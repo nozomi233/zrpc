@@ -48,7 +48,7 @@ public class ZookeeperRegistry extends AbstractRegistry {
         // 服务提供方的端口一般自己设定，我们还需要一个获取ip的方法
         // ip我们通常是需要一个局域网的ip，不是127.0.0.1，也不是ipv6
         //todo: 后续处理端口的问题
-        String node = parentNode + "/" + NetUtils.getIp() + ":" + 8088;
+        String node = parentNode + "/" + NetUtils.getIp() + ":" + ZrpcBootstrap.PORT;
         if (!ZookeeperUtils.exists(zooKeeper, node, null)){
             ZookeeperNode zookeeperNode = new ZookeeperNode(node, null);
             ZookeeperUtils.createNode(zooKeeper, zookeeperNode, null, CreateMode.EPHEMERAL);
@@ -89,14 +89,15 @@ public class ZookeeperRegistry extends AbstractRegistry {
     }
 
     /**
-     * 注册中心的核心目的是什么？拉取合适的服务列表
+     * 注册中心的核心目的是什么？拉取合适的服务列表，而不是一个可用节点，否则就是把负载均衡器的任务做了
      * @param serviceName 服务名称
      * @return 服务列表
      */
     @Override
     public List<InetSocketAddress> lookup(String serviceName,String group) {
         // 1、找到服务对应的节点
-        String serviceNode = Constant.BASE_PROVIDERS_PATH + "/" + serviceName + "/" +group;
+        String serviceNode = Constant.BASE_PROVIDERS_PATH + "/" + serviceName;
+//        String serviceNode = Constant.BASE_PROVIDERS_PATH + "/" + serviceName + "/" +group;
 
         // 2、从zk中获取他的子节点, 192.168.12.123:2151
         List<String> children = ZookeeperUtils.getChildren(zooKeeper, serviceNode,null);
