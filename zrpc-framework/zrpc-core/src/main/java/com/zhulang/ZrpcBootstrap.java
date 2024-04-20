@@ -6,18 +6,14 @@ import com.zhulang.channelhandler.handler.ZrpcResponseEncoder;
 import com.zhulang.discovery.Registry;
 import com.zhulang.discovery.RegistryConfig;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.CharsetUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
-import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -38,6 +34,8 @@ public class ZrpcBootstrap {
     private RegistryConfig registryConfig;
     private ProtocolConfig protocolConfig;
     private int port = 8088;
+    public final static IdGenerator ID_GENERATOR = new IdGenerator(1, 2);
+
     // 注册中心
     private Registry registry;
 

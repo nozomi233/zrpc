@@ -83,7 +83,7 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
 
         // todo 需要对请求id和各种类型做处理
         ZrpcRequest zrpcRequest = ZrpcRequest.builder()
-                .requestId(1L)
+                .requestId(ZrpcBootstrap.ID_GENERATOR.getId())
                 .compressType((byte) 1)
                 .requestType(RequestType.REQUEST.getId())
                 .serializeType((byte) 1)
