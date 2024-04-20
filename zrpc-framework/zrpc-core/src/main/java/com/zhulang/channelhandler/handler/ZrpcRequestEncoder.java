@@ -1,6 +1,8 @@
 package com.zhulang.channelhandler.handler;
 
 import com.zhulang.ZrpcBootstrap;
+import com.zhulang.compress.Compressor;
+import com.zhulang.compress.CompressorFactory;
 import com.zhulang.enumeration.RequestType;
 import com.zhulang.serialize.SerializeUtil;
 import com.zhulang.serialize.Serializer;
@@ -83,10 +85,13 @@ public class ZrpcRequestEncoder extends MessageToByteEncoder<ZrpcRequest> {
         // 1. 根据配置的序列化方式进行序列化
         // 怎么实现序列化？ 1. 工具类，耦合性很高
 
-        Serializer serializer = SerializerFactory.getSerializer(ZrpcBootstrap.SERIALIZE_TYPE).getImpl();
+        Serializer serializer = SerializerFactory.getSerializer(zrpcRequest.getSerializeType()).getImpl();
         byte[] body = serializer.serialize(zrpcRequest.getRequestPayload());
 
         // 2. 根据配置的压缩方式进行压缩
+        Compressor compressor = CompressorFactory.getCompressor(zrpcRequest.getCompressType()).getImpl();
+
+        body = compressor.compress(body);
 
 
 

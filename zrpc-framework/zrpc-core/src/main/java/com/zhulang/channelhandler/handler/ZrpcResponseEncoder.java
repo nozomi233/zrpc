@@ -1,5 +1,7 @@
 package com.zhulang.channelhandler.handler;
 
+import com.zhulang.compress.Compressor;
+import com.zhulang.compress.CompressorFactory;
 import com.zhulang.serialize.Serializer;
 import com.zhulang.serialize.SerializerFactory;
 import com.zhulang.transport.message.MessageFormatConstant;
@@ -66,7 +68,11 @@ public class ZrpcResponseEncoder extends MessageToByteEncoder<ZrpcResponse> {
         // 对响应做序列化
         Serializer serializer = SerializerFactory.getSerializer(zrpcResponse.getSerializeType()).getImpl();
         byte[] body = serializer.serialize(zrpcResponse.getBody());
-        // todo 压缩
+        // 压缩
+        Compressor compressor = CompressorFactory.getCompressor(zrpcResponse.getCompressType()).getImpl();
+
+        body = compressor.compress(body);
+
         if (body != null) {
             byteBuf.writeBytes(body);
         }

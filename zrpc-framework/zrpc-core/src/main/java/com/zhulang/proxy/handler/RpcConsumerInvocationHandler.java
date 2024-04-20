@@ -2,6 +2,7 @@ package com.zhulang.proxy.handler;
 
 import com.zhulang.NettyBootstrapInitializer;
 import com.zhulang.ZrpcBootstrap;
+import com.zhulang.compress.CompressorFactory;
 import com.zhulang.discovery.Registry;
 import com.zhulang.enumeration.RequestType;
 import com.zhulang.exceptions.DiscoveryException;
@@ -85,7 +86,7 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         // todo 需要对请求id和各种类型做处理
         ZrpcRequest zrpcRequest = ZrpcRequest.builder()
                 .requestId(ZrpcBootstrap.ID_GENERATOR.getId())
-                .compressType((byte) 1)
+                .compressType(CompressorFactory.getCompressor(ZrpcBootstrap.COMPRESS_TYPE).getCode())
                 .requestType(RequestType.REQUEST.getId())
                 .serializeType(SerializerFactory.getSerializer(ZrpcBootstrap.SERIALIZE_TYPE).getCode())
                 .requestPayload(requestPayload)

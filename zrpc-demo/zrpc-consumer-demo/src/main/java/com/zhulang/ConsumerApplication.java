@@ -25,6 +25,7 @@ public class ConsumerApplication {
                 .application("first-zrpc-consumer")
                 .registry(new RegistryConfig("zookeeper://127.0.0.1:2181"))
                 .serialize("hessian")
+                .compress("gzip")
                 .reference(reference);
 
         HelloZrpc helloZrpc = reference.get();

@@ -1,5 +1,7 @@
 package com.zhulang.channelhandler.handler;
 
+import com.zhulang.compress.Compressor;
+import com.zhulang.compress.CompressorFactory;
 import com.zhulang.enumeration.RequestType;
 import com.zhulang.serialize.Serializer;
 import com.zhulang.serialize.SerializerFactory;
@@ -120,7 +122,9 @@ public class ZrpcRequestDecoder extends LengthFieldBasedFrameDecoder {
         byteBuf.readBytes(payload);
 
         // 有了字节数组之后就可以解压缩，反序列化
-        // todo 解压缩
+        // 解压缩
+        Compressor compressor = CompressorFactory.getCompressor(compressType).getImpl();
+        payload = compressor.decompress(payload);
 
         // 反序列化
         // 1 --> jdk
