@@ -40,7 +40,7 @@ public class ZrpcBootstrap {
     private String appName = "default";
     private RegistryConfig registryConfig;
     private ProtocolConfig protocolConfig;
-    public static int PORT = 8090;
+    public static int PORT = 8091;
     public final static IdGenerator ID_GENERATOR = new IdGenerator(1, 2);
     public static String SERIALIZE_TYPE = "jdk";
     public static String COMPRESS_TYPE = "gzip";
@@ -95,7 +95,7 @@ public class ZrpcBootstrap {
         // 尝试使用 registryConfig 获取一个注册中心，有点工厂设计模式的意思了
         this.registry = registryConfig.getRegistry();
         // todo 需要修改
-        ZrpcBootstrap.LOAD_BALANCER = new MinimumResponseTimeLoadBalancer();
+        ZrpcBootstrap.LOAD_BALANCER = new RoundRobinLoadBalancer();
         return this;
     }
 

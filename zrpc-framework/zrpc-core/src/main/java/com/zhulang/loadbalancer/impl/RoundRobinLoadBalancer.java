@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class RoundRobinLoadBalancer extends AbstractLoadBalancer {
 
+
     @Override
     protected Selector getSelector(List<InetSocketAddress> serviceList) {
         return new RoundRobinSelector(serviceList);
@@ -57,12 +58,6 @@ public class RoundRobinLoadBalancer extends AbstractLoadBalancer {
             return address;
         }
     }
-
-    @Override
-    public void reLoadBalance(String serviceName, List<InetSocketAddress> addresses) {
-
-    }
-
 
 
 }

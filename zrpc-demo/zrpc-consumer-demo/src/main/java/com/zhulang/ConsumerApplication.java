@@ -29,9 +29,18 @@ public class ConsumerApplication {
                 .reference(reference);
 
         HelloZrpc helloZrpc = reference.get();
-        for (int i = 0; i < 10; i++){
-            String sayHi = helloZrpc.sayHi("你好,nozomi");
-            log.info("sayHi-->{}", sayHi);
+        while (true){
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+            for (int i = 0; i < 5; i++){
+                String sayHi = helloZrpc.sayHi("你好,nozomi");
+                log.info("sayHi-->{}", sayHi);
+            }
+
         }
 
     }
