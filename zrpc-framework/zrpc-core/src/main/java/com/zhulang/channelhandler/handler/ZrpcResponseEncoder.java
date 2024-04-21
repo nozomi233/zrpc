@@ -31,7 +31,7 @@ import java.util.Date;
  *   +--------------------------------------------------------------------------------------------------------+---+
  * </pre>
  *
- * 4B magic(魔数)   --->yrpc.getBytes()
+ * 4B magic(魔数)   --->zrpc.getBytes()
  * 1B version(版本)   ----> 1
  * 2B header length 首部的长度
  * 4B full length 报文总长度

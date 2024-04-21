@@ -25,7 +25,7 @@ public abstract class AbstractLoadBalancer implements LoadBalancer {
         // 2、如果没有，就需要为这个service创建一个selector
         if (selector == null) {
             // 对于这个负载均衡器，内部应该维护服务列表作为缓存
-            List<InetSocketAddress> serviceList = ZrpcBootstrap.getInstance().getRegistry().lookup(serviceName,null);
+            List<InetSocketAddress> serviceList = ZrpcBootstrap.getInstance().getConfiguration().getRegistryConfig().getRegistry().lookup(serviceName,null);
 
             // 提供一些算法负责选取合适的节点
             selector = getSelector(serviceList);

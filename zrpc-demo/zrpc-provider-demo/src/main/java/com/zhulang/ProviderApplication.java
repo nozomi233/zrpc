@@ -28,7 +28,9 @@ public class ProviderApplication {
                 .registry(new RegistryConfig("zookeeper://127.0.0.1:2181"))
                 .protocol(new ProtocolConfig("jdk"))
                 // 发布服务
-                .publish(service)
+//                .publish(service)
+                // 扫包批量发布
+                .scan("com.zhulang")
                 .start();
     }
 }

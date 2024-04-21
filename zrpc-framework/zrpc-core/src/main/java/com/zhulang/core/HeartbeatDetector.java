@@ -28,7 +28,7 @@ public class HeartbeatDetector {
 
     public static void detectHeartbeat(String ServiceName) {
         // 1、从注册中心拉取服务列表并建立连接
-        Registry registry = ZrpcBootstrap.getInstance().getRegistry();
+        Registry registry = ZrpcBootstrap.getInstance().getConfiguration().getRegistryConfig().getRegistry();;
         List<InetSocketAddress> addresses = registry.lookup(ServiceName, null);
 
         // 将连接进行缓存
@@ -73,10 +73,10 @@ public class HeartbeatDetector {
                     long start = System.currentTimeMillis();
                     // 构建一个心跳请求
                     ZrpcRequest zrpcRequest = ZrpcRequest.builder()
-                            .requestId(ZrpcBootstrap.ID_GENERATOR.getId())
-                            .compressType(CompressorFactory.getCompressor(ZrpcBootstrap.COMPRESS_TYPE).getCode())
+                            .requestId(ZrpcBootstrap.getInstance().getConfiguration().getIdGenerator().getId())
+                            .compressType(CompressorFactory.getCompressor(ZrpcBootstrap.getInstance().getConfiguration().getCompressType()).getCode())
                             .requestType(RequestType.HEART_BEAT.getId())
-                            .serializeType(SerializerFactory.getSerializer(ZrpcBootstrap.SERIALIZE_TYPE).getCode())
+                            .serializeType(SerializerFactory.getSerializer(ZrpcBootstrap.getInstance().getConfiguration().getSerializeType()).getCode())
                             .timeStamp(start)
                             .build();
 

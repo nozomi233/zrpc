@@ -64,10 +64,10 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
 
         // 1、 创建请求
         ZrpcRequest zrpcRequest = ZrpcRequest.builder()
-                .requestId(ZrpcBootstrap.ID_GENERATOR.getId())
-                .compressType(CompressorFactory.getCompressor(ZrpcBootstrap.COMPRESS_TYPE).getCode())
+                .requestId(ZrpcBootstrap.getInstance().getConfiguration().idGenerator.getId())
+                .compressType(CompressorFactory.getCompressor(ZrpcBootstrap.getInstance().getConfiguration().getCompressType()).getCode())
                 .requestType(RequestType.REQUEST.getId())
-                .serializeType(SerializerFactory.getSerializer(ZrpcBootstrap.SERIALIZE_TYPE).getCode())
+                .serializeType(SerializerFactory.getSerializer(ZrpcBootstrap.getInstance().getConfiguration().getSerializeType()).getCode())
                 .timeStamp(new Date().getTime())
                 .requestPayload(requestPayload)
                 .build();
@@ -80,7 +80,7 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         // 2、发现服务，从注册中心拉取服务列表，并通过客户端负载均衡寻找一个可用节点
         // 传入服务的名字,返回ip+端口
 //        InetSocketAddress address = registry.lookup(interfaceRef.getName());
-        InetSocketAddress address = ZrpcBootstrap.LOAD_BALANCER.selectServiceAddress(interfaceRef.getName());
+        InetSocketAddress address = ZrpcBootstrap.getInstance().getConfiguration().getLoadBalancer().selectServiceAddress(interfaceRef.getName());
         if (log.isDebugEnabled()) {
             log.debug("服务调用方，发现了服务【{}】的可用主机【{}】.",
                     interfaceRef.getName(), address);
@@ -123,7 +123,7 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         ZrpcBootstrap.PENDING_REQUEST.put(zrpcRequest.getRequestId(), completableFuture);
 
         // 这里这几 writeAndFlush 写出一个请求，这个请求的实例就会进入pipeline执行出站的一系列操作
-        // 我们可以想象得到，第一个出站程序一定是将 yrpcRequest --> 二进制的报文
+        // 我们可以想象得到，第一个出站程序一定是将 zrpcRequest --> 二进制的报文
         channel.writeAndFlush(zrpcRequest).addListener((ChannelFutureListener) promise -> {
             // 当前的promise将来返回的结果是什么，writeAndFlush的返回结果
             // 一旦数据被写出去，这个promise也就结束了
