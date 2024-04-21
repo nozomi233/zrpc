@@ -105,12 +105,16 @@ public class ZrpcRequestDecoder extends LengthFieldBasedFrameDecoder {
         // 8、请求id
         long requestId = byteBuf.readLong();
 
+        // 9、时间戳
+        long timeStamp = byteBuf.readLong();
+
         // 我们需要封装
         ZrpcRequest zrpcRequest = new ZrpcRequest();
         zrpcRequest.setRequestType(requestType);
         zrpcRequest.setCompressType(compressType);
         zrpcRequest.setSerializeType(serializeType);
         zrpcRequest.setRequestId(requestId);
+        zrpcRequest.setTimeStamp(timeStamp);
 
         // 心跳请求没有负载，此处可以判断并直接返回
         if( requestType == RequestType.HEART_BEAT.getId() ){
@@ -123,14 +127,16 @@ public class ZrpcRequestDecoder extends LengthFieldBasedFrameDecoder {
 
         // 有了字节数组之后就可以解压缩，反序列化
         // 解压缩
-        Compressor compressor = CompressorFactory.getCompressor(compressType).getImpl();
-        payload = compressor.decompress(payload);
+        if(payload.length != 0) {
+            Compressor compressor = CompressorFactory.getCompressor(compressType).getImpl();
+            payload = compressor.decompress(payload);
 
-        // 反序列化
-        // 1 --> jdk
-        Serializer serializer = SerializerFactory.getSerializer(serializeType).getImpl();
-        RequestPayload requestPayload = serializer.deserialize(payload, RequestPayload.class);
-        zrpcRequest.setRequestPayload(requestPayload);
+
+            // 2、反序列化
+            Serializer serializer = SerializerFactory.getSerializer(serializeType).getImpl();
+            RequestPayload requestPayload = serializer.deserialize(payload, RequestPayload.class);
+            zrpcRequest.setRequestPayload(requestPayload);
+        }
 
 //        try (ByteArrayInputStream bis = new ByteArrayInputStream(payload);
 //             ObjectInputStream ois = new ObjectInputStream(bis)

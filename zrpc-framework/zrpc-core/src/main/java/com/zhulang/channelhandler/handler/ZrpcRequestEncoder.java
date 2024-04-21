@@ -69,6 +69,7 @@ public class ZrpcRequestEncoder extends MessageToByteEncoder<ZrpcRequest> {
         byteBuf.writeByte(zrpcRequest.getCompressType());
         // 8字节的请求id
         byteBuf.writeLong(zrpcRequest.getRequestId());
+        byteBuf.writeLong(zrpcRequest.getTimeStamp());
 
 //        // 如果是心跳请求， 就不处理请求体
 //        if (zrpcRequest.getRequestType() == RequestType.HEART_BEAT.getId()){
@@ -84,14 +85,14 @@ public class ZrpcRequestEncoder extends MessageToByteEncoder<ZrpcRequest> {
         // 写入请求体（requestPayload）
         // 1. 根据配置的序列化方式进行序列化
         // 怎么实现序列化？ 1. 工具类，耦合性很高
-
-        Serializer serializer = SerializerFactory.getSerializer(zrpcRequest.getSerializeType()).getImpl();
-        byte[] body = serializer.serialize(zrpcRequest.getRequestPayload());
-
-        // 2. 根据配置的压缩方式进行压缩
-        Compressor compressor = CompressorFactory.getCompressor(zrpcRequest.getCompressType()).getImpl();
-
-        body = compressor.compress(body);
+        byte[] body = null;
+        if (zrpcRequest.getRequestPayload() != null) {
+            Serializer serializer = SerializerFactory.getSerializer(zrpcRequest.getSerializeType()).getImpl();
+            body = serializer.serialize(zrpcRequest.getRequestPayload());
+            // 2、根据配置的压缩方式进行压缩
+            Compressor compressor = CompressorFactory.getCompressor(zrpcRequest.getCompressType()).getImpl();
+            body = compressor.compress(body);
+        }
 
 
 

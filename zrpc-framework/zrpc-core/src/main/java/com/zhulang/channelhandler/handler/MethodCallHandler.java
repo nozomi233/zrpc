@@ -2,6 +2,7 @@ package com.zhulang.channelhandler.handler;
 
 import com.zhulang.ServiceConfig;
 import com.zhulang.ZrpcBootstrap;
+import com.zhulang.enumeration.RequestType;
 import com.zhulang.enumeration.RespCode;
 import com.zhulang.transport.message.RequestPayload;
 import com.zhulang.transport.message.ZrpcRequest;
@@ -28,11 +29,15 @@ public class MethodCallHandler extends SimpleChannelInboundHandler<ZrpcRequest> 
         RequestPayload requestPayload = zrpcRequest.getRequestPayload();
 
         // 2. 根据负载内容进行方法调用
-        Object result = callTargetMethod(requestPayload);
+        Object result = null;
+        if (!(zrpcRequest.getRequestType() == RequestType.HEART_BEAT.getId())){
+            result = callTargetMethod(requestPayload);
 
-        if (log.isDebugEnabled()){
-            log.debug("请求【{}】已经在服务端完成方法调用。", zrpcRequest.getRequestId());
+            if (log.isDebugEnabled()){
+                log.debug("请求【{}】已经在服务端完成方法调用。", zrpcRequest.getRequestId());
+            }
         }
+
 
         // 3. 封装响应
         ZrpcResponse zrpcResponse = new ZrpcResponse();

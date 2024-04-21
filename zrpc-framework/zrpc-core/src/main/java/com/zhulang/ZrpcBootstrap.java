@@ -3,10 +3,12 @@ package com.zhulang;
 import com.zhulang.channelhandler.handler.MethodCallHandler;
 import com.zhulang.channelhandler.handler.ZrpcRequestDecoder;
 import com.zhulang.channelhandler.handler.ZrpcResponseEncoder;
+import com.zhulang.core.HeartbeatDetector;
 import com.zhulang.discovery.Registry;
 import com.zhulang.discovery.RegistryConfig;
 import com.zhulang.loadbalancer.LoadBalancer;
 import com.zhulang.loadbalancer.impl.ConsistentHashBalancer;
+import com.zhulang.loadbalancer.impl.MinimumResponseTimeLoadBalancer;
 import com.zhulang.loadbalancer.impl.RoundRobinLoadBalancer;
 import com.zhulang.transport.message.ZrpcRequest;
 import io.netty.bootstrap.ServerBootstrap;
@@ -20,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -37,7 +40,7 @@ public class ZrpcBootstrap {
     private String appName = "default";
     private RegistryConfig registryConfig;
     private ProtocolConfig protocolConfig;
-    public static int PORT = 8088;
+    public static int PORT = 8090;
     public final static IdGenerator ID_GENERATOR = new IdGenerator(1, 2);
     public static String SERIALIZE_TYPE = "jdk";
     public static String COMPRESS_TYPE = "gzip";
@@ -50,6 +53,7 @@ public class ZrpcBootstrap {
 
     // 连接的缓存,如果使用InetSocketAddress这样的类做key，一定要看他有没有重写equals方法和toString方法
     public final static Map<InetSocketAddress, Channel> CHANNEL_CACHE = new ConcurrentHashMap<>(16);
+    public final static TreeMap<Long, Channel> ANSWER_TIME_CHANNEL_CACHE = new TreeMap<>();
 
     // 维护已经发布且暴露的服务列表 key-> interface的全限定名  value -> ServiceConfig
     public final static Map<String,ServiceConfig<?>> SERVERS_LIST = new ConcurrentHashMap<>(16);
@@ -91,7 +95,7 @@ public class ZrpcBootstrap {
         // 尝试使用 registryConfig 获取一个注册中心，有点工厂设计模式的意思了
         this.registry = registryConfig.getRegistry();
         // todo 需要修改
-        ZrpcBootstrap.LOAD_BALANCER = new ConsistentHashBalancer();
+        ZrpcBootstrap.LOAD_BALANCER = new MinimumResponseTimeLoadBalancer();
         return this;
     }
 
@@ -188,6 +192,9 @@ public class ZrpcBootstrap {
      * ---------------------------服务调用方的相关api---------------------------------
      */
     public ZrpcBootstrap reference(ReferenceConfig<?> reference) {
+
+        // 开启对这个服务的心跳检测
+        HeartbeatDetector.detectHeartbeat(reference.getInterface().getName());
 
         // 在这个方法里我们是否可以拿到相关的配置项-注册中心
         // 配置reference，将来调用get方法时，方便生成代理对象

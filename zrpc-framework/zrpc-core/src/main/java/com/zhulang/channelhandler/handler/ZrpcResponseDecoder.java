@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.util.Date;
 
 /**
  * <p>
@@ -104,12 +105,16 @@ public class ZrpcResponseDecoder  extends LengthFieldBasedFrameDecoder {
         // 8、请求id
         long requestId = byteBuf.readLong();
 
+        // 9、时间戳
+        long timeStamp = byteBuf.readLong();
+
         // 我们需要封装
         ZrpcResponse zrpcResponse = new ZrpcResponse();
         zrpcResponse.setCode(responseCode);
         zrpcResponse.setCompressType(compressType);
         zrpcResponse.setSerializeType(serializeType);
         zrpcResponse.setRequestId(requestId);
+        zrpcResponse.setTimeStamp(timeStamp);
 
         // todo 心跳请求没有负载，此处可以判断并直接返回
 //        if( requestType == RequestType.HEART_BEAT.getId() ){
@@ -121,14 +126,18 @@ public class ZrpcResponseDecoder  extends LengthFieldBasedFrameDecoder {
         byteBuf.readBytes(payload);
 
         // 有了字节数组之后就可以解压缩，反序列化
-        // 1. 解压缩
-        Compressor compressor = CompressorFactory.getCompressor(compressType).getImpl();
-        payload = compressor.decompress(payload);
+        if(payload.length > 0) {
+            // 有了字节数组之后就可以解压缩，反序列化
+            // 1、解压缩
+            Compressor compressor = CompressorFactory.getCompressor(compressType).getImpl();
+            payload = compressor.decompress(payload);
 
-        // 2. 反序列化
-        Serializer serializer = SerializerFactory.getSerializer(zrpcResponse.getSerializeType()).getImpl();
-        Object body = serializer.deserialize(payload, Object.class);
-        zrpcResponse.setBody(body);
+            // 2、反序列化
+            Serializer serializer = SerializerFactory
+                    .getSerializer(zrpcResponse.getSerializeType()).getImpl();
+            Object body = serializer.deserialize(payload, Object.class);
+            zrpcResponse.setBody(body);
+        }
 
         if (log.isDebugEnabled()){
             log.debug("响应【{}】已经在调用端完成解码工作。", zrpcResponse.getRequestId());

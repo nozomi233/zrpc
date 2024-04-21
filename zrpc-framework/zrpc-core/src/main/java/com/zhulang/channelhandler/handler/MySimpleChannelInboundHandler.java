@@ -24,7 +24,7 @@ public class MySimpleChannelInboundHandler extends SimpleChannelInboundHandler<Z
         // 服务提供方，给予的结果
         Object returnValue = zrpcResponse.getBody();
         // 从全局的挂起的请求中寻找与之匹配的待处理的 cf
-        CompletableFuture<Object> completableFuture = ZrpcBootstrap.PENDING_REQUEST.get(1L);
+        CompletableFuture<Object> completableFuture = ZrpcBootstrap.PENDING_REQUEST.get(zrpcResponse.getRequestId());
         completableFuture.complete(returnValue);
         if (log.isDebugEnabled()){
             log.debug("已寻找到编号为【{}】的completableFuture，处理响应结果。", zrpcResponse.getRequestId());

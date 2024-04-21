@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.util.Date;
 
 /**
  * 自定义协议编码器
@@ -63,15 +64,20 @@ public class ZrpcResponseEncoder extends MessageToByteEncoder<ZrpcResponse> {
         byteBuf.writeByte(zrpcResponse.getCompressType());
         // 8字节的请求id
         byteBuf.writeLong(zrpcResponse.getRequestId());
+        byteBuf.writeLong(new Date().getTime());
 
         // 写入请求体（requestPayload）
         // 对响应做序列化
-        Serializer serializer = SerializerFactory.getSerializer(zrpcResponse.getSerializeType()).getImpl();
-        byte[] body = serializer.serialize(zrpcResponse.getBody());
-        // 压缩
-        Compressor compressor = CompressorFactory.getCompressor(zrpcResponse.getCompressType()).getImpl();
+        byte[] body = null;
+        if(zrpcResponse.getBody() != null) {
+            Serializer serializer = SerializerFactory.getSerializer(zrpcResponse.getSerializeType()).getImpl();
+            body = serializer.serialize(zrpcResponse.getBody());
 
-        body = compressor.compress(body);
+            // 2、压缩
+            Compressor compressor = CompressorFactory.getCompressor(zrpcResponse.getCompressType()).getImpl();
+            body = compressor.compress(body);
+        }
+
 
         if (body != null) {
             byteBuf.writeBytes(body);
