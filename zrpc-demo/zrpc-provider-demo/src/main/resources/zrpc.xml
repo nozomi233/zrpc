@@ -3,7 +3,7 @@
 
 <configuration>
 
-    <port>32134</port>
+    <port>8089</port>
     <appName>zrpc-default-appName</appName>
     <registry url="zookeeper://127.0.0.1:2181"/>
 
