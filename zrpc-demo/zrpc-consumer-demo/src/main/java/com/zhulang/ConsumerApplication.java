@@ -30,13 +30,13 @@ public class ConsumerApplication {
 
         HelloZrpc helloZrpc = reference.get();
         while (true){
-            try {
-                Thread.sleep(10000);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+//            try {
+//                Thread.sleep(10000);
+//            } catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
 
-            for (int i = 0; i < 5; i++){
+            for (int i = 0; i < 50; i++){
                 String sayHi = helloZrpc.sayHi("你好,nozomi");
                 log.info("sayHi-->{}", sayHi);
             }

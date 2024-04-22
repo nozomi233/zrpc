@@ -4,8 +4,14 @@ import com.zhulang.IdGenerator;
 import com.zhulang.discovery.RegistryConfig;
 import com.zhulang.loadbalancer.LoadBalancer;
 import com.zhulang.loadbalancer.impl.RoundRobinLoadBalancer;
+import com.zhulang.protection.CircuitBreaker;
+import com.zhulang.protection.RateLimiter;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+
+import java.net.SocketAddress;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
@@ -38,6 +44,11 @@ public class Configuration {
 
     // 配置信息-->负载均衡策略
     private LoadBalancer loadBalancer = new RoundRobinLoadBalancer();
+
+    // 为每一个ip配置一个限流器
+    private final Map<SocketAddress, RateLimiter> everyIpRateLimiter = new ConcurrentHashMap<>(16);
+    // 为每一个ip配置一个断路器，熔断
+    private final Map<SocketAddress, CircuitBreaker> everyIpCircuitBreaker = new ConcurrentHashMap<>(16);
 
 
     // 读xml，dom4j

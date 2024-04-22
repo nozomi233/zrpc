@@ -2,11 +2,13 @@ package com.zhulang.proxy.handler;
 
 import com.zhulang.NettyBootstrapInitializer;
 import com.zhulang.ZrpcBootstrap;
+import com.zhulang.annotation.TryTimes;
 import com.zhulang.compress.CompressorFactory;
 import com.zhulang.discovery.Registry;
 import com.zhulang.enumeration.RequestType;
 import com.zhulang.exceptions.DiscoveryException;
 import com.zhulang.exceptions.NetworkException;
+import com.zhulang.protection.CircuitBreaker;
 import com.zhulang.serialize.SerializerFactory;
 import com.zhulang.transport.message.RequestPayload;
 import com.zhulang.transport.message.ZrpcRequest;
@@ -17,7 +19,11 @@ import lombok.extern.slf4j.Slf4j;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Date;
+import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -43,68 +49,120 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         this.interfaceRef = interfaceRef;
     }
 
+    /**
+     * 所有的方法调用，本质都会走到这里
+     * @param proxy the proxy instance that the method was invoked on
+     *
+     * @param method the {@code Method} instance corresponding to
+     * the interface method invoked on the proxy instance.  The declaring
+     * class of the {@code Method} object will be the interface that
+     * the method was declared in, which may be a superinterface of the
+     * proxy interface that the proxy class inherits the method through.
+     *
+     * @param args an array of objects containing the values of the
+     * arguments passed in the method invocation on the proxy instance,
+     * or {@code null} if interface method takes no arguments.
+     * Arguments of primitive types are wrapped in instances of the
+     * appropriate primitive wrapper class, such as
+     * {@code java.lang.Integer} or {@code java.lang.Boolean}.
+     *
+     * @return 返回值
+     * @throws Throwable
+     */
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        // 我们调用saHi方法，事实上会走进这个代码段中
-        // 我们已经知道 method（具体的方法），args(参数列表)
-//        log.info("method-->{}", method.getName());
-//        log.info("args-->{}", args);
 
-        // 调整顺序，先封装请求，再获取服务端节点和连接，这样可以在选择节点的时候根据封装好的请求内容进行负载均衡
-        /*
-         * ------------------ 封装报文 ---------------------------
-         */
-        RequestPayload requestPayload = RequestPayload.builder()
-                .interfaceName(interfaceRef.getName())
-                .methodName(method.getName())
-                .parametersType(method.getParameterTypes())
-                .parametersValue(args)
-                .returnType(method.getReturnType())
-                .build();
+        // 从接口中获取判断是否需要重试
+        TryTimes tryTimesAnnotation = method.getAnnotation(TryTimes.class);
 
-        // 1、 创建请求
-        ZrpcRequest zrpcRequest = ZrpcRequest.builder()
-                .requestId(ZrpcBootstrap.getInstance().getConfiguration().idGenerator.getId())
-                .compressType(CompressorFactory.getCompressor(ZrpcBootstrap.getInstance().getConfiguration().getCompressType()).getCode())
-                .requestType(RequestType.REQUEST.getId())
-                .serializeType(SerializerFactory.getSerializer(ZrpcBootstrap.getInstance().getConfiguration().getSerializeType()).getCode())
-                .timeStamp(System.currentTimeMillis())
-                .requestPayload(requestPayload)
-                .build();
-
-        // 将请求存入本地线程，需要在合适的时候调用remove方法
-        ZrpcBootstrap.REQUEST_THREAD_LOCAL.set(zrpcRequest);
-
-
-
-        // 2、发现服务，从注册中心拉取服务列表，并通过客户端负载均衡寻找一个可用节点
-        // 传入服务的名字,返回ip+端口
-//        InetSocketAddress address = registry.lookup(interfaceRef.getName());
-        InetSocketAddress address = ZrpcBootstrap.getInstance().getConfiguration().getLoadBalancer().selectServiceAddress(interfaceRef.getName());
-        if (log.isDebugEnabled()) {
-            log.debug("服务调用方，发现了服务【{}】的可用主机【{}】.",
-                    interfaceRef.getName(), address);
-        }
-
-        // 使用netty连接服务器，发送 调用的 服务的名字+方法名字+参数列表，得到结果
-        // 定义线程池，EventLoopGroup
-        // q：整个连接过程放在这里行不行，也就意味着每次调用都会产生一个新的netty连接。如何缓存我们的连接
-        // 也就意味着，每次在此处建立一个新的连接是不合适的
-
-
-        // 解决方案？缓存channel，尝试从缓存中获取channel，如果未获取，则创建新的连接，并进行缓存
-        // 2、尝试获取一个可用通道
-        Channel channel = getAvailableChannel(address);
-        if (log.isDebugEnabled()) {
-            log.debug("获取了和【{}】建立的连接通道,准备发送数据.", address);
+        // 默认值0,代表不重试
+        int tryTimes = 0;
+        int intervalTime = 0;
+        if (tryTimesAnnotation != null) {
+            tryTimes = tryTimesAnnotation.tryTimes();
+            intervalTime = tryTimesAnnotation.intervalTime();
         }
 
 
-        /*
-         * ------------------同步策略-------------------------
-         */
+        while (true) {
+            // 什么情况下需要重试，1、异常   2、响应有问题 code == 500
+            /*
+             * ------------------ 1、封装报文 ---------------------------
+             */
+            RequestPayload requestPayload = RequestPayload.builder()
+                    .interfaceName(interfaceRef.getName())
+                    .methodName(method.getName())
+                    .parametersType(method.getParameterTypes())
+                    .parametersValue(args)
+                    .returnType(method.getReturnType())
+                    .build();
+
+            // 创建一个请求
+            ZrpcRequest zrpcRequest = ZrpcRequest.builder()
+                    .requestId(ZrpcBootstrap.getInstance().getConfiguration().getIdGenerator().getId())
+                    .compressType(CompressorFactory.getCompressor(ZrpcBootstrap.getInstance().getConfiguration().getCompressType()).getCode())
+                    .requestType(RequestType.REQUEST.getId())
+                    .serializeType(SerializerFactory.getSerializer(ZrpcBootstrap.getInstance().getConfiguration().getSerializeType()).getCode())
+                    .timeStamp(System.currentTimeMillis())
+                    .requestPayload(requestPayload)
+                    .build();
+
+            // 2、将请求存入本地线程，需要在合适的时候remove
+            ZrpcBootstrap.REQUEST_THREAD_LOCAL.set(zrpcRequest);
+
+            // 3、发现服务，从注册中心拉取服务列表，并通过客户端负载均衡寻找一个可用的服务
+            // 传入服务的名字,返回ip+端口
+            InetSocketAddress address = ZrpcBootstrap.getInstance()
+                    .getConfiguration().getLoadBalancer().selectServiceAddress(interfaceRef.getName());
+            if (log.isDebugEnabled()) {
+                log.debug("服务调用方，发现了服务【{}】的可用主机【{}】.",
+                        interfaceRef.getName(), address);
+            }
+
+            // 4、获取当前地址所对应的断路器，如果断路器是打开的则不发送请求，抛出异常
+            Map<SocketAddress, CircuitBreaker> everyIpCircuitBreaker = ZrpcBootstrap.getInstance()
+                    .getConfiguration().getEveryIpCircuitBreaker();
+            CircuitBreaker circuitBreaker = everyIpCircuitBreaker.get(address);
+            if (circuitBreaker == null) {
+                circuitBreaker = new CircuitBreaker(10, 0.5F);
+                everyIpCircuitBreaker.put(address, circuitBreaker);
+            }
+
+            try {
+                // 如果断路器是打开的
+                if (zrpcRequest.getRequestType() != RequestType.HEART_BEAT.getId() && circuitBreaker.isBreak()) {
+                    // 定期打开
+                    Timer timer = new Timer();
+                    timer.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            ZrpcBootstrap.getInstance()
+                                    .getConfiguration().getEveryIpCircuitBreaker()
+                                    .get(address).reset();
+                        }
+                    }, 5000);
+
+                    throw new RuntimeException("当前断路器已经开启，无法发送请求");
+                }
+
+                // 使用netty连接服务器，发送 调用的 服务的名字+方法名字+参数列表，得到结果
+                // 定义线程池，EventLoopGroup
+                // q：整个连接过程放在这里行不行，也就意味着每次调用都会产生一个新的netty连接。如何缓存我们的连接
+                // 也就意味着，每次在此处建立一个新的连接是不合适的
+
+                // 解决方案？缓存channel，尝试从缓存中获取channel，如果未获取，则创建新的连接，并进行缓存
+
+                // 5、尝试获取一个可用通道
+                Channel channel = getAvailableChannel(address);
+                if (log.isDebugEnabled()) {
+                    log.debug("获取了和【{}】建立的连接通道,准备发送数据.", address);
+                }
+
+                /*
+                 * ------------------同步策略-------------------------
+                 */
 //                ChannelFuture channelFuture = channel.writeAndFlush(new Object()).await();
-        // 需要学习channelFuture的简单的api get 阻塞获取结果，getNow 获取当前的结果，如果未处理完成，返回null
+                // 需要学习channelFuture的简单的api get 阻塞获取结果，getNow 获取当前的结果，如果未处理完成，返回null
 //                if(channelFuture.isDone()){
 //                    Object object = channelFuture.getNow();
 //                } else if( !channelFuture.isSuccess() ){
@@ -113,39 +171,62 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
 //                    throw new RuntimeException(cause);
 //                }
 
-        /*
-         * ------------------异步策略-------------------------
-         */
+                /*
+                 * ------------------异步策略-------------------------
+                 */
+                // 6、写出报文
+                CompletableFuture<Object> completableFuture = new CompletableFuture<>();
+                // 将 completableFuture 暴露出去
+                ZrpcBootstrap.PENDING_REQUEST.put(zrpcRequest.getRequestId(), completableFuture);
 
-        // 4、写出报文
-        CompletableFuture<Object> completableFuture = new CompletableFuture<>();
-        // 将 completableFuture 暴露出去
-        ZrpcBootstrap.PENDING_REQUEST.put(zrpcRequest.getRequestId(), completableFuture);
-
-        // 这里这几 writeAndFlush 写出一个请求，这个请求的实例就会进入pipeline执行出站的一系列操作
-        // 我们可以想象得到，第一个出站程序一定是将 zrpcRequest --> 二进制的报文
-        channel.writeAndFlush(zrpcRequest).addListener((ChannelFutureListener) promise -> {
-            // 当前的promise将来返回的结果是什么，writeAndFlush的返回结果
-            // 一旦数据被写出去，这个promise也就结束了
-            // 但是我们想要的是什么？  服务端给我们的返回值，所以这里处理completableFuture是有问题的
-            // 是不是应该将 completableFuture 挂起并且暴露，并且在得到服务提供方的响应的时候调用complete方法
+                // 这里这几 writeAndFlush 写出一个请求，这个请求的实例就会进入pipeline执行出站的一系列操作
+                // 我们可以想象得到，第一个出站程序一定是将 zrpcRequest --> 二进制的报文
+                channel.writeAndFlush(zrpcRequest).addListener((ChannelFutureListener) promise -> {
+                    // 当前的promise将来返回的结果是什么，writeAndFlush的返回结果
+                    // 一旦数据被写出去，这个promise也就结束了
+                    // 但是我们想要的是什么？  服务端给我们的返回值，所以这里处理completableFuture是有问题的
+                    // 是不是应该将 completableFuture 挂起并且暴露，并且在得到服务提供方的响应的时候调用complete方法
 //                    if(promise.isDone()){
 //                        completableFuture.complete(promise.getNow());
 //                    }
 
-            // 只需要处理以下异常就行了
-            if (!promise.isSuccess()) {
-                completableFuture.completeExceptionally(promise.cause());
-            }
-        });
+                    // 只需要处理以下异常就行了
+                    if (!promise.isSuccess()) {
+                        completableFuture.completeExceptionally(promise.cause());
+                    }
+                });
 
-        // 清理ThreadLocal
-        ZrpcBootstrap.REQUEST_THREAD_LOCAL.remove();
-//
-        // 如果没有地方处理这个 completableFuture ，这里会阻塞，等待complete方法的执行
-        // q: 我们需要在哪里调用complete方法得到结果，很明显 pipeline 中最终的handler的处理结果
-        // 5、获得响应的结果
-        return completableFuture.get(10, TimeUnit.SECONDS);
+                // 7、清理threadLocal
+                ZrpcBootstrap.REQUEST_THREAD_LOCAL.remove();
+
+                // 如果没有地方处理这个 completableFuture ，这里会阻塞，等待complete方法的执行
+                // q: 我们需要在哪里调用complete方法得到结果，很明显 pipeline 中最终的handler的处理结果
+
+                // 8、获得响应的结果
+
+                Object result = completableFuture.get(10, TimeUnit.SECONDS);
+                // 记录成功的请求
+                circuitBreaker.recordRequest();
+                return result;
+            } catch (Exception e) {
+                // 次数减一，并且等待固定时间，固定时间有一定的问题，重试风暴
+                tryTimes--;
+                // 记录错误的次数
+                circuitBreaker.recordErrorRequest();
+                try {
+                    Thread.sleep(intervalTime);
+                } catch (InterruptedException ex) {
+                    log.error("在进行重试时发生异常.", ex);
+                }
+                if (tryTimes < 0) {
+                    log.error("对方法【{}】进行远程调用时，重试{}次，依然不可调用",
+                            method.getName(), tryTimes, e);
+                    break;
+                }
+                log.error("在进行第{}次重试时发生异常.", 3 - tryTimes, e);
+            }
+        }
+        throw new RuntimeException("执行远程方法" + method.getName() + "调用失败。");
     }
 
 
