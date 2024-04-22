@@ -25,13 +25,14 @@ public class CompressorFactory {
 
     /**
      * 使用工厂方法获取一个CompressorWrapper
+     *
      * @param compressorType 序列化的类型
      * @return CompressWrapper
      */
     public static ObjectWrapper<Compressor> getCompressor(String compressorType) {
         ObjectWrapper<Compressor> compressorObjectWrapper = COMPRESSOR_CACHE.get(compressorType);
-        if(compressorObjectWrapper == null){
-            log.error("未找到您配置的【{}】压缩算法，默认选用gzip算法。",compressorType);
+        if (compressorObjectWrapper == null) {
+            log.error("未找到您配置的【{}】压缩算法，默认选用gzip算法。", compressorType);
             return COMPRESSOR_CACHE.get("gzip");
         }
         return compressorObjectWrapper;
@@ -39,8 +40,8 @@ public class CompressorFactory {
 
     public static ObjectWrapper<Compressor> getCompressor(byte compressorType) {
         ObjectWrapper<Compressor> compressorObjectWrapper = COMPRESSOR_CACHE_CODE.get(compressorType);
-        if ((compressorObjectWrapper == null)){
-            log.error("未找到您配置的编号为【{}】的压缩算法，默认选用gzip算法。",compressorType);
+        if ((compressorObjectWrapper == null)) {
+            log.error("未找到您配置的编号为【{}】的压缩算法，默认选用gzip算法。", compressorType);
             return COMPRESSOR_CACHE.get("gzip");
         }
         return compressorObjectWrapper;
@@ -48,10 +49,11 @@ public class CompressorFactory {
 
     /**
      * 给工厂中新增一个压缩方式
+     *
      * @param compressorObjectWrapper 压缩类型的包装
      */
-    public static void addCompressor(ObjectWrapper<Compressor> compressorObjectWrapper){
-        COMPRESSOR_CACHE.put(compressorObjectWrapper.getName(),compressorObjectWrapper);
-        COMPRESSOR_CACHE_CODE.put(compressorObjectWrapper.getCode(),compressorObjectWrapper);
+    public static void addCompressor(ObjectWrapper<Compressor> compressorObjectWrapper) {
+        COMPRESSOR_CACHE.put(compressorObjectWrapper.getName(), compressorObjectWrapper);
+        COMPRESSOR_CACHE_CODE.put(compressorObjectWrapper.getCode(), compressorObjectWrapper);
     }
 }

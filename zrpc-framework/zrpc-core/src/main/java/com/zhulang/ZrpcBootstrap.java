@@ -107,19 +107,6 @@ public class ZrpcBootstrap {
         return this;
     }
 
-    /**
-     * 配置当前暴露的服务使用的协议
-     * @param protocolConfig 协议的封装
-     * @return this当前实例
-     */
-    public ZrpcBootstrap protocol(ProtocolConfig protocolConfig) {
-        configuration.setProtocolConfig(protocolConfig);
-        if(log.isDebugEnabled()){
-            log.debug("当前工程使用了：{}协议进行序列化",protocolConfig.toString());
-        }
-        return this;
-    }
-
 
     /**
      * ---------------------------服务提供方的相关api---------------------------------

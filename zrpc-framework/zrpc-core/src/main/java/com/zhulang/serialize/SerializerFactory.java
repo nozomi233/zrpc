@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 序列化器
+ *
  * @Author Nozomi
  * @Date 2024/4/20 15:58
  */
@@ -19,12 +20,12 @@ public class SerializerFactory {
     private final static ConcurrentHashMap<Byte, ObjectWrapper<Serializer>> SERIALIZER_CACHE_CODE = new ConcurrentHashMap<>(8);
 
     static {
-        ObjectWrapper<Serializer> jdk = new  ObjectWrapper<>((byte) 1, "jdk", new JdkSerializer());
-        ObjectWrapper<Serializer> json = new  ObjectWrapper<>((byte) 2, "json", new JsonSerializer());
-        ObjectWrapper<Serializer> hessian = new  ObjectWrapper<>((byte) 3, "hessian", new HessianSerializer());
-        SERIALIZER_CACHE.put("jdk",jdk);
-        SERIALIZER_CACHE.put("json",json);
-        SERIALIZER_CACHE.put("hessian",hessian);
+        ObjectWrapper<Serializer> jdk = new ObjectWrapper<>((byte) 1, "jdk", new JdkSerializer());
+        ObjectWrapper<Serializer> json = new ObjectWrapper<>((byte) 2, "json", new JsonSerializer());
+        ObjectWrapper<Serializer> hessian = new ObjectWrapper<>((byte) 3, "hessian", new HessianSerializer());
+        SERIALIZER_CACHE.put("jdk", jdk);
+        SERIALIZER_CACHE.put("json", json);
+        SERIALIZER_CACHE.put("hessian", hessian);
 
         SERIALIZER_CACHE_CODE.put((byte) 1, jdk);
         SERIALIZER_CACHE_CODE.put((byte) 2, json);
@@ -33,13 +34,14 @@ public class SerializerFactory {
 
     /**
      * 使用工厂方法获取一个SerializerWrapper
+     *
      * @param serializeType 序列化的类型
      * @return SerializerWrapper
      */
     public static Serializer getSerializer2(String serializeType) {
-        if ("jdk".equalsIgnoreCase(serializeType)){
+        if ("jdk".equalsIgnoreCase(serializeType)) {
             return new JdkSerializer();
-        } else if ("json".equalsIgnoreCase(serializeType)){
+        } else if ("json".equalsIgnoreCase(serializeType)) {
             return new JsonSerializer();
         }
 
@@ -48,23 +50,24 @@ public class SerializerFactory {
 
     /**
      * 使用工厂方法获取一个SerializerWrapper
+     *
      * @param serializeType 序列化的类型
      * @return SerializerWrapper
      */
-    public static  ObjectWrapper<Serializer> getSerializer(String serializeType) {
+    public static ObjectWrapper<Serializer> getSerializer(String serializeType) {
         ObjectWrapper<Serializer> serializerWrapper = SERIALIZER_CACHE.get(serializeType);
-        if(serializerWrapper == null){
-            log.error("未找到您配置的【{}】序列化工具，默认选用jdk的序列化方式。",serializeType);
+        if (serializerWrapper == null) {
+            log.error("未找到您配置的【{}】序列化工具，默认选用jdk的序列化方式。", serializeType);
             return SERIALIZER_CACHE.get("jdk");
         }
 
         return SERIALIZER_CACHE.get(serializeType);
     }
 
-    public static  ObjectWrapper<Serializer> getSerializer(Byte serializeCode) {
+    public static ObjectWrapper<Serializer> getSerializer(Byte serializeCode) {
         ObjectWrapper<Serializer> serializerWrapper = SERIALIZER_CACHE_CODE.get(serializeCode);
-        if(serializerWrapper == null){
-            log.error("未找到您配置的【{}】序列化工具，默认选用jdk的序列化方式。",serializeCode);
+        if (serializerWrapper == null) {
+            log.error("未找到您配置的【{}】序列化工具，默认选用jdk的序列化方式。", serializeCode);
             return SERIALIZER_CACHE.get("jdk");
         }
         return SERIALIZER_CACHE_CODE.get(serializeCode);
@@ -72,10 +75,11 @@ public class SerializerFactory {
 
     /**
      * 新增一个新的序列化器
+     *
      * @param serializerObjectWrapper 序列化器的包装
      */
-    public static void addSerializer(ObjectWrapper<Serializer> serializerObjectWrapper){
-        SERIALIZER_CACHE.put(serializerObjectWrapper.getName(),serializerObjectWrapper);
-        SERIALIZER_CACHE_CODE.put(serializerObjectWrapper.getCode(),serializerObjectWrapper);
+    public static void addSerializer(ObjectWrapper<Serializer> serializerObjectWrapper) {
+        SERIALIZER_CACHE.put(serializerObjectWrapper.getName(), serializerObjectWrapper);
+        SERIALIZER_CACHE_CODE.put(serializerObjectWrapper.getCode(), serializerObjectWrapper);
     }
 }

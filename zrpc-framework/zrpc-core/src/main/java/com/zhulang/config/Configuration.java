@@ -1,7 +1,6 @@
 package com.zhulang.config;
 
 import com.zhulang.IdGenerator;
-import com.zhulang.ProtocolConfig;
 import com.zhulang.discovery.RegistryConfig;
 import com.zhulang.loadbalancer.LoadBalancer;
 import com.zhulang.loadbalancer.impl.RoundRobinLoadBalancer;
@@ -27,8 +26,6 @@ public class Configuration {
 
     // 配置信息-->注册中心
     private RegistryConfig registryConfig = new RegistryConfig("zookeeper://127.0.0.1:2181");
-
-    private ProtocolConfig protocolConfig = new ProtocolConfig("jdk");
 
     // 配置信息-->序列化协议
     private String serializeType = "jdk";
