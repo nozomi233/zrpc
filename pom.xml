@@ -17,6 +17,8 @@
         <module>zrpc-demo/zrpc-api</module>
         <module>zrpc-demo/zrpc-consumer-demo</module>
         <module>zrpc-demo/zrpc-provider-demo</module>
+        <module>zrpc-demo/zrpc-springboot-consumer</module>
+        <module>zrpc-demo/zrpc-springboot-provider</module>
     </modules>
 
     <properties>
