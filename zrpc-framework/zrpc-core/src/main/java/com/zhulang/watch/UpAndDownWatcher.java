@@ -29,7 +29,8 @@ public class UpAndDownWatcher implements Watcher {
             }
             String serviceName = getServiceName(event.getPath());
             Registry registry = ZrpcBootstrap.getInstance().getConfiguration().getRegistryConfig().getRegistry();;
-            List<InetSocketAddress> addresses = registry.lookup(serviceName, null);
+            List<InetSocketAddress> addresses = registry.lookup(serviceName,
+                    ZrpcBootstrap.getInstance().getConfiguration().getGroup());
             // 处理新增的节点
             for (InetSocketAddress address : addresses) {
                 // 新增的节点   会在address 不在CHANNEL_CACHE

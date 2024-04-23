@@ -195,6 +195,7 @@ public class ZrpcBootstrap {
         // 配置reference，将来调用get方法时，方便生成代理对象
         // 1、reference需要一个注册中心
         reference.setRegistry(configuration.getRegistryConfig().getRegistry());
+        reference.setGroup(this.getConfiguration().getGroup());
         return this;
     }
 
@@ -255,10 +256,15 @@ public class ZrpcBootstrap {
                 throw new RuntimeException(e);
             }
 
+            // 获取分组信息
+            ZrpcApi zrpcApi = clazz.getAnnotation(ZrpcApi.class);
+            String group = zrpcApi.group();
+
             for (Class<?> anInterface : interfaces) {
                 ServiceConfig<?> serviceConfig = new ServiceConfig<>();
                 serviceConfig.setInterface(anInterface);
                 serviceConfig.setRef(instance);
+                serviceConfig.setGroup(group);
                 // 3、发布
                 publish(serviceConfig);
                 if (log.isDebugEnabled()){
@@ -336,5 +342,10 @@ public class ZrpcBootstrap {
 
     public Configuration getConfiguration() {
         return configuration;
+    }
+
+    public ZrpcBootstrap group(String group) {
+        this.getConfiguration().setGroup(group);
+        return this;
     }
 }

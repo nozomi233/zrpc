@@ -2,6 +2,7 @@ package com.zhulang.loadbalancer;
 
 import com.zhulang.ZrpcBootstrap;
 import com.zhulang.discovery.Registry;
+
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +18,7 @@ public abstract class AbstractLoadBalancer implements LoadBalancer {
     private Map<String, Selector> cache = new ConcurrentHashMap<>(8);
 
     @Override
-    public InetSocketAddress selectServiceAddress(String serviceName) {
+    public InetSocketAddress selectServiceAddress(String serviceName, String group) {
 
         // 1、优先从cache中获取一个选择器
         Selector selector = cache.get(serviceName);
@@ -25,7 +26,8 @@ public abstract class AbstractLoadBalancer implements LoadBalancer {
         // 2、如果没有，就需要为这个service创建一个selector
         if (selector == null) {
             // 对于这个负载均衡器，内部应该维护服务列表作为缓存
-            List<InetSocketAddress> serviceList = ZrpcBootstrap.getInstance().getConfiguration().getRegistryConfig().getRegistry().lookup(serviceName,null);
+            List<InetSocketAddress> serviceList = ZrpcBootstrap.getInstance()
+                    .getConfiguration().getRegistryConfig().getRegistry().lookup(serviceName, group);
 
             // 提供一些算法负责选取合适的节点
             selector = getSelector(serviceList);
@@ -39,13 +41,14 @@ public abstract class AbstractLoadBalancer implements LoadBalancer {
     }
 
     @Override
-    public synchronized void reLoadBalance(String serviceName,List<InetSocketAddress> addresses) {
+    public synchronized void reLoadBalance(String serviceName, List<InetSocketAddress> addresses) {
         // 我们可以根据新的服务列表生成新的selector
-        cache.put(serviceName,getSelector(addresses));
+        cache.put(serviceName, getSelector(addresses));
     }
 
     /**
      * 由子类进行扩展
+     *
      * @param serviceList 服务列表
      * @return 负载均衡算法选择器
      */
