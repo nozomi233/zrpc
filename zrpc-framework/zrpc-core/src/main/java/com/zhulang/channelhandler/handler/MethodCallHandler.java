@@ -2,6 +2,7 @@ package com.zhulang.channelhandler.handler;
 
 import com.zhulang.ServiceConfig;
 import com.zhulang.ZrpcBootstrap;
+import com.zhulang.core.ShutDownHolder;
 import com.zhulang.enumeration.RequestType;
 import com.zhulang.enumeration.RespCode;
 import com.zhulang.protection.RateLimiter;
@@ -37,15 +38,15 @@ public class MethodCallHandler extends SimpleChannelInboundHandler<ZrpcRequest> 
         // 2、 获得通道
         Channel channel = channelHandlerContext.channel();
 
-//        // 3、查看关闭的挡板是否打开，如果挡板已经打开，返回一个错误的响应
-//        if( ShutDownHolder.BAFFLE.get() ){
-//            zrpcResponse.setCode(RespCode.BECOLSING.getCode());
-//            channel.writeAndFlush(zrpcResponse);
-//            return;
-//        }
-//
-//        // 4、计数器加一
-//        ShutDownHolder.REQUEST_COUNTER.increment();
+        // 3、查看关闭的挡板是否打开，如果挡板已经打开，返回一个错误的响应
+        if( ShutDownHolder.BAFFLE.get() ){
+            zrpcResponse.setCode(RespCode.BECOLSING.getCode());
+            channel.writeAndFlush(zrpcResponse);
+            return;
+        }
+
+        // 4、计数器加一
+        ShutDownHolder.REQUEST_COUNTER.increment();
 
         // 4、完成限流相关的操作
         SocketAddress socketAddress = channel.remoteAddress();
@@ -92,9 +93,9 @@ public class MethodCallHandler extends SimpleChannelInboundHandler<ZrpcRequest> 
 
         // 6、写出响应
         channel.writeAndFlush(zrpcResponse);
-//
-//        // 7、计数器减一
-//        ShutDownHolder.REQUEST_COUNTER.decrement();
+
+        // 7、计数器减一
+        ShutDownHolder.REQUEST_COUNTER.decrement();
 
     }
 

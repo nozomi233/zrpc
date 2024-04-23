@@ -6,6 +6,7 @@ import com.zhulang.channelhandler.handler.ZrpcRequestDecoder;
 import com.zhulang.channelhandler.handler.ZrpcResponseEncoder;
 import com.zhulang.config.Configuration;
 import com.zhulang.core.HeartbeatDetector;
+import com.zhulang.core.ZrpcShutdownHook;
 import com.zhulang.discovery.Registry;
 import com.zhulang.discovery.RegistryConfig;
 import com.zhulang.loadbalancer.LoadBalancer;
@@ -144,6 +145,10 @@ public class ZrpcBootstrap {
      * 启动netty服务
      */
     public void start() {
+
+        // 注册关闭应用程序的钩子函数
+        Runtime.getRuntime().addShutdownHook(new ZrpcShutdownHook());
+
         // 1、创建eventLoop，老板只负责处理请求，之后会将请求分发至worker
         EventLoopGroup boss = new NioEventLoopGroup(2);
         EventLoopGroup worker = new NioEventLoopGroup(10);
